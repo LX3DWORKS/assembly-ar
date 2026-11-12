@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="theme-color" content="#071523">
+<title>Assembly AR v7 | Landscape camera + unrestricted rotation</title>
+<script src="https://cdn.jsdelivr.net/npm/occt-import-js@0.0.23/dist/occt-import-js.js"></script>
+<style>
+
+:root{font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;color:#edf6ff;background:#061421;--cyan:#62d3e7;--panel:#0b2133;--line:#36566e}
+*{box-sizing:border-box}html,body{margin:0;height:100%;overflow:hidden}button,select,input{font:inherit}button{cursor:pointer}button:disabled{opacity:.42;cursor:default}
+#stage{position:fixed;inset:0 auto 0 0;width:66.6667%;height:100%;overflow:hidden;background:radial-gradient(circle at 45% 44%,#234359,#061421 73%);z-index:0}#stage canvas{position:absolute;inset:0;display:block;touch-action:none}
+body.is-ar #stage{width:100%}#hud{position:fixed;inset:0;z-index:5;pointer-events:none;display:flex;flex-direction:row;align-items:stretch}#cameraPane{position:relative;width:66.6667%;height:100%;flex:0 0 66.6667%;pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none;overflow:hidden}#reticle{position:absolute;left:50%;top:50%;width:28px;height:28px;transform:translate(-50%,-50%);display:none;pointer-events:none;opacity:.7}#reticle:before,#reticle:after{content:"";position:absolute;background:#75eedd;box-shadow:0 1px 3px #001}#reticle:before{left:13px;top:0;width:2px;height:28px}#reticle:after{left:0;top:13px;width:28px;height:2px}body.is-ar #reticle{display:block}
+#sidebar{position:relative;flex:1;height:100%;min-width:0;background:#0b2133;color:#edf6ff;border-left:1px solid #355b74;pointer-events:auto;display:flex;flex-direction:column;overflow:hidden;box-shadow:none}
+.sidebar-head{padding:9px 12px 8px;border-bottom:1px solid var(--line);flex:0 0 auto;background:#0b2234}.brand{display:flex;align-items:center;justify-content:space-between;gap:7px;font-size:14px;font-weight:800}.brand small{font-size:10px;font-weight:500;color:#b1cbda}.sidebar-scroll{padding:8px 11px 13px;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;flex:1}
+.btn{padding:8px 7px;min-height:34px;font-size:11px;font-weight:680;border:1px solid #456b82;background:#17364a;color:#eefaff;border-radius:8px;white-space:normal}.btn.primary{background:var(--cyan);color:#062537;border-color:var(--cyan)}.btn.ghost{background:#0c2739;border-color:#355971}.btn.file{position:relative;overflow:hidden}.btn.file input{position:absolute;inset:0;width:100%;opacity:0;cursor:pointer}
+.buttons{display:flex;gap:6px;margin:6px 0}.buttons>.btn,.buttons>.file{flex:1;min-width:0}#message{background:#112f42;border:1px solid #3e657c;border-radius:8px;padding:8px 9px;font-size:11px;line-height:1.4;color:#e0f0fa;margin:6px 0 8px;overflow-wrap:anywhere}#status{font-size:10px;color:#8acbdf;line-height:1.4;margin:4px 0 8px;overflow-wrap:anywhere}
+.section{margin:12px 0 5px;color:var(--cyan);font-size:10px;letter-spacing:.6px;font-weight:850;text-transform:uppercase}.small{font-size:10px;color:#a9c5d6;line-height:1.35;margin:5px 0}.line{display:flex;align-items:center;gap:7px;margin:7px 0}.line label{font-size:11px;min-width:87px}.line input[type=range]{flex:1;min-width:0;accent-color:var(--cyan)}.line output{font-size:10px;min-width:37px;text-align:right;font-variant-numeric:tabular-nums}.rotation-row{display:grid;grid-template-columns:1fr 51px 51px;gap:5px;align-items:center;margin:5px 0}.rotation-row span{font-size:11px;color:#c7dfeb}.rotation-row .btn{min-height:31px;padding:4px}.rotate-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin:6px 0}
+select{width:100%;border-radius:7px;background:#173649;border:1px solid #496d83;color:#e4f2fb;padding:7px;font-size:11px}details{border-top:1px solid #284e65;margin-top:11px;padding-top:6px}summary{cursor:pointer;list-style:none;color:#bce0f2;font-size:11px;font-weight:800;padding:6px 0}summary:before{content:"+ ";color:var(--cyan)}details[open] summary:before{content:"− "}#scanText,#report{font-size:10px;line-height:1.4;color:#bad1df;overflow-wrap:anywhere}#report{white-space:pre-wrap}
+#quick{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:7px}#quick .btn{min-height:39px}#quick #find{grid-column:1/-1}#modeBar{display:flex;gap:5px}#modeBar .btn{flex:1}#hint,#quickSettings,#panelHandle{display:none!important}#panel{background:transparent;border:none;overflow:visible;padding:0;margin:0;max-height:none!important}#panel.closed{max-height:none!important}#controls{display:block!important}.pill{font-size:10px;border:1px solid #426b80;border-radius:7px;padding:3px 6px;color:#80dfda}
+#orientationWarning{font-size:10px;color:#f5c680;display:none}#perfReadout{font-size:10px;color:#8fcada;line-height:1.4;margin:7px 0 3px}body.is-ar #hint{display:none}
+@media (orientation:portrait){#orientationWarning{display:block} .rotation-row{grid-template-columns:1fr 39px 39px;gap:2px}.sidebar-head{padding:5px}.sidebar-scroll{padding:6px}.brand{font-size:11px}.brand small{font-size:9px}.btn{font-size:10px;padding:6px 4px}#cameraPane{width:61%;flex-basis:61%}#stage{width:61%}body.is-ar #stage{width:100%}}
+@media(max-height:500px){.sidebar-head{padding:5px 10px}.sidebar-scroll{padding:4px 9px 8px}.section{margin:8px 0 3px}.btn{min-height:31px}.buttons{margin:4px 0}#message{margin:4px 0;padding:6px}#status{margin:2px 0}}
+
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<div id="hud">
+  <section id="cameraPane" aria-label="Camera and CAD gesture area"><div id="reticle"></div></section>
+  <aside id="sidebar" aria-label="Assembly AR controls">
+    <div class="sidebar-head">
+      <div class="brand"><span>ASSEMBLY AR <span class="pill">v7</span></span><small>LANDSCAPE</small></div>
+      <div class="small" id="orientationWarning">Rotate your phone to landscape for the full camera and control layout.</div>
+      <div class="buttons"><label class="btn file primary">Load STEP<input id="stepFile" type="file" accept=".stp,.step"></label><button id="demo" class="btn">Demo</button><button id="arBtn" class="btn primary">Start AR</button></div>
+    </div>
+    <div class="sidebar-scroll" id="sidebarScroll">
+      <div id="message" role="status">Load a STEP model. Drag anywhere in the left viewer to rotate it freely. Pinch to zoom.</div>
+      <div id="status">Ready · Fast camera mode</div>
+      <div class="small">Drag the left view to rotate the STEP freely, without angle limits. Two fingers: zoom or twist.</div>
+      <div class="buttons" id="modeBar"><button id="homeView" class="btn ghost">Reset view</button><button id="helpBtn" class="btn ghost">Instructions</button></div>
+      <div class="section">1 · Camera mode</div>
+      <select id="arQuality"><option value="fast" selected>FAST · smoother AR tracking</option><option value="depth">DEPTH · experimental scan, slower</option></select>
+      <div class="section">2 · Match assembly</div>
+      <div id="quick"><button id="rough" class="btn" disabled>Place model</button><button id="scan" class="btn" disabled>Scan object</button><button id="find" class="btn primary" disabled>Find assembly</button></div>
+      <div class="small" id="scanText">Place starts from your chosen CAD rotation. Find requires Depth mode and a scan.</div>
+      <details id="rotationDetails"><summary>Fine rotation · unlimited yaw / pitch / roll</summary>
+        <div class="rotation-row"><span>Yaw</span><button class="btn ghost" data-turn="yaw" data-dir="-1">−15°</button><button class="btn ghost" data-turn="yaw" data-dir="1">+15°</button></div>
+        <div class="rotation-row"><span>Pitch</span><button class="btn ghost" data-turn="pitch" data-dir="-1">−15°</button><button class="btn ghost" data-turn="pitch" data-dir="1">+15°</button></div>
+        <div class="rotation-row"><span>Roll</span><button class="btn ghost" data-turn="roll" data-dir="-1">−15°</button><button class="btn ghost" data-turn="roll" data-dir="1">+15°</button></div>
+        <button id="clearRot" class="btn ghost">Reset orientation</button>
+      </details>
+      <div class="section">Appearance</div>
+      <div class="line"><label for="opacity">Transparency</label><input id="opacity" type="range" min="0" max="100" value="43"><output id="opacityOut">43%</output></div>
+      <div id="perfReadout">AR performance: not running.</div>
+      <details id="advanced"><summary>Advanced · adjustments and report</summary>
+        <div class="section">Position (model mm)</div>
+        <div class="buttons"><button class="btn" data-nudge="left">← 25</button><button class="btn" data-nudge="right">25 →</button><button class="btn" data-nudge="up">↑ 25</button><button class="btn" data-nudge="down">25 ↓</button></div>
+        <div class="buttons"><button class="btn" data-nudge="near">Closer 50</button><button class="btn" data-nudge="far">Farther 50</button></div>
+        <div class="line"><label for="tolerance">Threshold</label><input id="tolerance" type="range" min="3" max="30" value="5"><output id="toleranceOut">5 mm</output></div>
+        <select id="parts"><option value="all">All components</option></select>
+        <div class="buttons"><button id="wire" class="btn">Wireframe off</button><button id="resetMatch" class="btn">Reset match</button></div>
+        <div id="report">No inspection data yet. Unobserved surfaces are not automatically approved.</div>
+        <div class="buttons"><button id="export" class="btn">Export findings</button><button id="clearScan" class="btn">Clear scan</button></div>
+      </details>
+      <div class="small">CAD-to-depth matching is experimental. A ±5 mm threshold is not a verified measurement accuracy. No camera images or STEP models are uploaded by this page.</div>
+    </div>
+  </aside>
+</div>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+const $=id=>document.getElementById(id),note=t=>$('message').textContent=t,stats=t=>$('status').textContent=t;
+const scene=new THREE.Scene();scene.background=new THREE.Color('#071523');
+const camPane=$('cameraPane');const camera=new THREE.PerspectiveCamera(46,Math.max(1,camPane.clientWidth)/Math.max(1,camPane.clientHeight),.008,200);
+const renderer=new THREE.WebGLRenderer({alpha:true,antialias:false,powerPreference:'high-performance',precision:'mediump'});
+renderer.setPixelRatio(1);renderer.setSize(Math.max(1,camPane.clientWidth),Math.max(1,camPane.clientHeight));renderer.xr.enabled=true;renderer.xr.setFramebufferScaleFactor(.55);renderer.outputColorSpace=THREE.SRGBColorSpace;
+$('stage').append(renderer.domElement);
+scene.add(new THREE.HemisphereLight(0xffffff,0x7b8b98,2.2));const light=new THREE.DirectionalLight(0xffffff,1.4);light.position.set(2,3,5);scene.add(light);
+// Quaternion-based model rotation, not constrained OrbitControls.
+let previewDistance=1.8;const activePointers=new Map();let lastTwo=null;
+function rotateByPixels(dx,dy){
+ const sensitivity=.008;
+ const viewerQ=(session?renderer.xr.getCamera():camera).getWorldQuaternion(new THREE.Quaternion());
+ const right=new THREE.Vector3(1,0,0).applyQuaternion(viewerQ);
+ const up=new THREE.Vector3(0,1,0).applyQuaternion(viewerQ);
+ const yaw=new THREE.Quaternion().setFromAxisAngle(up,dx*sensitivity);
+ const pitch=new THREE.Quaternion().setFromAxisAngle(right,dy*sensitivity);
+ modelOrigin.quaternion.premultiply(yaw).premultiply(pitch).normalize();
+ if(session){baseOrientation.copy(modelOrigin.quaternion);bestPose=null;scanCloud.visible=false;}
+}
+function rollByRadians(angle){
+ const viewerQ=(session?renderer.xr.getCamera():camera).getWorldQuaternion(new THREE.Quaternion());
+ const forward=new THREE.Vector3(0,0,1).applyQuaternion(viewerQ);
+ modelOrigin.quaternion.premultiply(new THREE.Quaternion().setFromAxisAngle(forward,angle)).normalize();
+ if(session){baseOrientation.copy(modelOrigin.quaternion);bestPose=null;scanCloud.visible=false;}
+}
+camPane.addEventListener('pointerdown',e=>{camPane.setPointerCapture(e.pointerId);activePointers.set(e.pointerId,{x:e.clientX,y:e.clientY});lastTwo=null});
+camPane.addEventListener('pointermove',e=>{
+ if(!activePointers.has(e.pointerId)||!loaded)return;
+ const prev=activePointers.get(e.pointerId);activePointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+ if(activePointers.size===1){rotateByPixels(e.clientX-prev.x,e.clientY-prev.y);}
+ else if(activePointers.size===2){
+  const pts=[...activePointers.values()];const dist=Math.hypot(pts[0].x-pts[1].x,pts[0].y-pts[1].y);
+  const theta=Math.atan2(pts[1].y-pts[0].y,pts[1].x-pts[0].x);
+  if(lastTwo){let delta=theta-lastTwo.theta;while(delta>Math.PI)delta-=2*Math.PI;while(delta<-Math.PI)delta+=2*Math.PI;rollByRadians(delta);
+    if(!session){previewDistance=Math.max(.1,Math.min(60,previewDistance*lastTwo.dist/Math.max(10,dist)));camera.position.z=previewDistance;}
+    else if(modelOrigin.visible){const dz=Math.max(-.05,Math.min(.05,(dist-lastTwo.dist)*.001));const fw=new THREE.Vector3(0,0,1).applyQuaternion(renderer.xr.getCamera().quaternion);modelOrigin.position.addScaledVector(fw,dz);}
+  }lastTwo={dist,theta};
+ }
+});
+for(const name of ['pointerup','pointercancel','lostpointercapture'])camPane.addEventListener(name,e=>{activePointers.delete(e.pointerId);lastTwo=null});
+// Prevent a gesture on the camera pane from triggering a WebXR select action.
+camPane.addEventListener('beforexrselect',e=>e.preventDefault());
+for(const btn of document.querySelectorAll('[data-turn]'))btn.onclick=()=>{
+ if(!loaded){note('Load STEP or Demo first.');return;}
+ const angle=THREE.MathUtils.degToRad(15*Number(btn.dataset.dir));
+ const axis=btn.dataset.turn==='yaw'?new THREE.Vector3(0,1,0):btn.dataset.turn==='pitch'?new THREE.Vector3(1,0,0):new THREE.Vector3(0,0,1);
+ const worldAxis=axis.applyQuaternion((session?renderer.xr.getCamera():camera).getWorldQuaternion(new THREE.Quaternion()));
+ modelOrigin.quaternion.premultiply(new THREE.Quaternion().setFromAxisAngle(worldAxis,angle)).normalize();
+ if(session){baseOrientation.copy(modelOrigin.quaternion);bestPose=null;scanCloud.visible=false;}
+};
+for(const btn of document.querySelectorAll('[data-nudge]'))btn.onclick=()=>{
+ if(!session||!modelOrigin.visible){note('Place the model in AR before adjusting its position.');return;}
+ const cameraQ=renderer.xr.getCamera().getWorldQuaternion(new THREE.Quaternion());
+ const dict={left:[-.025,0,0],right:[.025,0,0],up:[0,.025,0],down:[0,-.025,0],near:[0,0,.05],far:[0,0,-.05]};
+ const v=dict[btn.dataset.nudge];modelOrigin.position.add(new THREE.Vector3(...v).applyQuaternion(cameraQ));bestPose=null;scanCloud.visible=false;
+};
+const modelOrigin=new THREE.Group();scene.add(modelOrigin);const scaledCAD=new THREE.Group();scaledCAD.scale.setScalar(.001);modelOrigin.add(scaledCAD);const geometryRoot=new THREE.Group();scaledCAD.add(geometryRoot);
+const scanCloud=new THREE.Points(new THREE.BufferGeometry(),new THREE.PointsMaterial({size:.01,sizeAttenuation:true,vertexColors:true,depthWrite:false,depthTest:false}));scanCloud.frustumCulled=false;scanCloud.renderOrder=80;scene.add(scanCloud);scanCloud.visible=false;
+let parts=[],loaded=false,modelName='',selected='all',wireframe=false,cadCenter=new THREE.Vector3(),cadDiagonal=0,displayRadius=.5;
+let session=null,referenceSpace=null,viewerSpace=null,hitSource=null,hit=null,depthMode=false,scanOn=false,lastScan=0,frameCount=0,scanOrigin=null,scanPoints=new Map(),lastCamera=null,motion=0,firstViewQuaternion=new THREE.Quaternion(),bestPose=null,matching=false,depthSeen=false,arStatus='idle';
+const voxel=.012,quality={sampled:0,frames:0,travel:0,median:null,p90:null,confidence:'not evaluated'};
+const sphere=new THREE.Mesh(new THREE.RingGeometry(.035,.05,30).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0x6beed9,side:THREE.DoubleSide}));sphere.visible=false;scene.add(sphere);
+function disposeObjects(){cadSurface=null;tree=null;for(const child of parts){child.geometry?.dispose();child.material?.dispose();}geometryRoot.clear();parts=[];loaded=false;$('parts').innerHTML='<option value="all">All components</option>';clearMatching(true);}
+function material(c){return new THREE.MeshBasicMaterial({color:c,side:THREE.DoubleSide,transparent:true,opacity:.43,depthWrite:false});}
+function newPart(mesh,name){mesh.name=name;geometryRoot.add(mesh);parts.push(mesh);const item=document.createElement('option');item.value=String(parts.length-1);item.textContent=parts.length+'. '+name;$('parts').append(item);}
+function importedMesh(m){const attr=m.attributes?.position?.array;if(!attr?.length)return null;const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(attr,3));if(m.attributes.normal?.array?.length)g.setAttribute('normal',new THREE.Float32BufferAttribute(m.attributes.normal.array,3));else g.computeVertexNormals();if(m.index?.array?.length)g.setIndex(m.index.array);const c=(m.color?.length>=3)?new THREE.Color(...m.color.slice(0,3)):new THREE.Color('#69d5ed');return new THREE.Mesh(g,material(c));}
+async function loadSTEP(f){note('Importing STEP surfaces. Large assemblies may require preprocessing…');if(typeof window.occtimportjs!=='function')throw Error('OpenCascade importer unavailable. Check internet connection.');const api=await window.occtimportjs();const file=new Uint8Array(await f.arrayBuffer());const parsed=api.ReadStepFile(file,null);if(!parsed.success||!parsed.meshes?.length)throw Error('No readable solid surfaces in STEP');disposeObjects();const visited=new Set();function walk(node){for(const idx of node.meshes||[]){const obj=importedMesh(parsed.meshes[idx]);if(obj){newPart(obj,node.name||parsed.meshes[idx]?.name||'Component '+(idx+1));visited.add(idx);}}for(const child of node.children||[])walk(child);}walk(parsed.root||{meshes:parsed.meshes.map((_,i)=>i)});if(!parts.length)parsed.meshes.forEach((m,i)=>{const mesh=importedMesh(m);if(mesh)newPart(mesh,m.name||'Component '+(i+1));});if(!parts.length)throw Error('Geometry conversion produced no surfaces');modelName=f.name;loaded=true;prepareModel();note('STEP imported ('+parts.length+' parts). Drag the CAD to match the physical viewing angle, then start AR.');}
+function demo(){disposeObjects();function box(name,dims,pos,color){const mesh=new THREE.Mesh(new THREE.BoxGeometry(...dims),material(color));mesh.position.set(...pos);newPart(mesh,name);}box('Base plate',[290,14,190],[0,0,0],'#56cce8');box('Left bracket',[14,130,175],[-118,73,0],'#6fe8b6');box('Right bracket',[14,130,175],[118,73,0],'#6fe8b6');box('Top plate',[290,12,190],[0,144,0],'#ffc27c');for(const x of [-94,94])for(const z of [-62,62]){const b=new THREE.Mesh(new THREE.CylinderGeometry(9,9,22,12),material('#ff968b'));b.position.set(x,161,z);newPart(b,'Bolt '+(parts.length-3));}modelName='Demo steel bracket';loaded=true;prepareModel();note('Demo loaded. Drag to rotate, then match the product with the camera.');}
+function prepareModel(){geometryRoot.position.set(0,0,0);const bounds=new THREE.Box3().setFromObject(geometryRoot);cadCenter=bounds.getCenter(new THREE.Vector3());geometryRoot.position.copy(cadCenter).multiplyScalar(-1);cadDiagonal=Math.max(.1,bounds.getSize(new THREE.Vector3()).length()*.001);displayRadius=Math.max(.10,cadDiagonal*.53);resetPreview();showParts();clearMatching(true);}
+function resetPreview(){if(session)return;previewDistance=Math.max(.30,displayRadius*2.4);camera.position.set(0,0,previewDistance);camera.lookAt(0,0,0);modelOrigin.position.set(0,0,0);modelOrigin.quaternion.identity();modelOrigin.visible=loaded;scene.background=new THREE.Color('#071523');}
+function showParts(){const alpha=Number($('opacity').value)/100;for(const [i,m]of parts.entries()){const active=selected==='all'||selected===String(i);m.visible=true;m.material.opacity=Math.max(.008,alpha)*(active?1:.12);m.material.wireframe=wireframe;}$('opacityOut').textContent=$('opacity').value+'%';}
+$('stepFile').onchange=async e=>{const f=e.target.files?.[0];if(!f)return;try{if(session)throw Error('Stop AR before loading a different STEP model');await loadSTEP(f);}catch(err){note('STEP import failed: '+err.message);console.error(err);}e.target.value='';};$('demo').onclick=()=>{if(session){note('Stop AR before changing the model.');return;}demo();};$('homeView').onclick=resetPreview;$('helpBtn').onclick=()=>note('Landscape: left is the camera; right is controls. Drag on the left to rotate freely in any direction. Pinch to zoom, twist with two fingers to roll. Choose DEPTH to scan, then Place model, Scan, Find assembly.');$('opacity').oninput=showParts;$('parts').onchange=e=>{selected=e.target.value;showParts();};$('wire').onclick=()=>{wireframe=!wireframe;$('wire').textContent='Wireframe: '+(wireframe?'on':'off');showParts();};$('tolerance').oninput=()=>{$('toleranceOut').textContent=$('tolerance').value+' mm';if(bestPose)updateDeviationDots();};
+
+$('arQuality').onchange=()=>{if(session){$('arQuality').value=depthMode?'depth':'fast';note('Stop AR before switching camera modes.');return;}note($('arQuality').value==='depth'?'Depth mode selected. On supported phones, this can collect 3D shape samples.':'Fast AR selected. You can place the CAD, but automatic 3D shape matching is unavailable.');};
+function scanReport(msg){$('scanText').textContent=msg;stats(msg);}
+function clearMatching(disposeCloud=false){scanOn=false;scanPoints.clear();scanOrigin=null;frameCount=0;lastScan=0;motion=0;lastCamera=null;depthSeen=false;bestPose=null;quality.sampled=0;quality.frames=0;quality.travel=0;quality.median=null;quality.p90=null;quality.confidence='not evaluated';scanCloud.visible=false;if(disposeCloud){scanCloud.geometry.dispose();scanCloud.geometry=new THREE.BufferGeometry();}$('report').textContent='No automatic match. Geometry comparison has not been validated to ±5 mm.';scanReport('Not scanned. No observed surfaces are classified as passing.');$('scan').textContent='Scan object';if($('find'))$('find').disabled=true;}
+$('clearScan').onclick=()=>{clearMatching(true);note('Scan cleared. Aim at the assembly and start a new scan.');};$('resetMatch').onclick=()=>{clearMatching(true);modelOrigin.visible=false;note('Match cleared. Use Place roughly, then Scan object.');};
+// From preview orbit: R_object-in-camera = inverse(R_preview-camera). Freeze this view before starting XR.
+function previewCameraQuaternion(){return modelOrigin.quaternion.clone();}
+let viewSeed=new THREE.Quaternion(),baseOrientation=new THREE.Quaternion();
+function applyRotationTweaks(){ /* Orientation adjusted directly via unrestricted quaternions. */ }
+$('clearRot').onclick=()=>{if(!loaded)return;modelOrigin.quaternion.copy(session?alignmentReference:new THREE.Quaternion());if(session){baseOrientation.copy(modelOrigin.quaternion);bestPose=null;scanCloud.visible=false;}else viewSeed.identity();};
+function roughPlace(){if(!session||!loaded)return;clearMatching(true);const viewer=renderer.xr.getCamera();viewer.updateMatrixWorld(true);const worldQ=viewer.quaternion.clone();const goal=worldQ.clone().multiply(viewSeed).normalize();let pos=null;if(hit){try{const pose=hit.getPose(referenceSpace);if(pose)pos=new THREE.Vector3(pose.transform.position.x,pose.transform.position.y,pose.transform.position.z);}catch(_){}}
+ if(!pos){const p=viewer.getWorldPosition(new THREE.Vector3());const leftW=camPane.clientWidth/innerWidth;const horizontal=(leftW-1)*Math.tan(THREE.MathUtils.degToRad(camera.fov/2))*innerWidth/innerHeight;const forward=new THREE.Vector3(horizontal,0,-1).normalize().applyQuaternion(worldQ);pos=p.addScaledVector(forward,Math.max(.65,Math.min(2,displayRadius*2)));}
+ modelOrigin.position.copy(pos);modelOrigin.quaternion.copy(goal);baseOrientation.copy(goal);modelOrigin.visible=true;scanOrigin=pos.clone();bestPose=null;scanCloud.visible=false;note('Approximate CAD pose set from the orientation you chose. Scan the stationary product from several angles, then press Find assembly.');scanReport('Rough pose established. Auto Match has not run yet.');}
+$('rough').onclick=roughPlace;
+async function startAR(){
+ if(session){await session.end();return;}
+ if(!loaded){note('Load STEP or Demo first.');return;}
+ if(!navigator.xr){note('WebXR unavailable; use Android Chrome on HTTPS with ARCore.');return;}
+ $('arBtn').disabled=true;viewSeed=previewCameraQuaternion();
+ try{
+  if(!await navigator.xr.isSessionSupported('immersive-ar'))throw Error('Immersive AR not supported on this device/browser');
+  const base={requiredFeatures:['local','hit-test','dom-overlay'],domOverlay:{root:$('hud')}};
+  depthMode=false;const wantsDepth=$('arQuality').value==='depth';
+  if(wantsDepth){
+   try{session=await navigator.xr.requestSession('immersive-ar',{...base,requiredFeatures:['local','hit-test','dom-overlay','depth-sensing'],depthSensing:{usagePreference:['cpu-optimized'],dataFormatPreference:['luminance-alpha','float32']}});depthMode=session.depthUsage==='cpu-optimized';if(!depthMode)throw Error('CPU depth was not available');}
+   catch(err){if(session){await session.end();session=null;}session=await navigator.xr.requestSession('immersive-ar',base);depthMode=false;$('arQuality').value='fast';note('CPU depth unavailable. Starting FAST AR without automatic geometry recognition.');}
+  }else session=await navigator.xr.requestSession('immersive-ar',base);
+  document.body.classList.add('is-ar');resizeViewport();
+  renderer.xr.setReferenceSpaceType('local');await renderer.xr.setSession(session);
+  referenceSpace=await session.requestReferenceSpace('local');viewerSpace=await session.requestReferenceSpace('viewer');
+  // Ray aims approximately at the centre of the unobstructed left 2/3 of the screen.
+  try{
+    const leftFraction=camPane.clientWidth/innerWidth;const ndcX=leftFraction-1;
+    const dx=ndcX*Math.tan(THREE.MathUtils.degToRad(camera.fov/2))*innerWidth/innerHeight;
+    const offsetRay=new XRRay({x:0,y:0,z:0,w:1},{x:dx,y:0,z:-1,w:0});
+    hitSource=await session.requestHitTestSource({space:viewerSpace,offsetRay});
+  }catch(_){hitSource=await session.requestHitTestSource({space:viewerSpace});}
+  scene.background=null;$('arBtn').textContent='Stop AR';$('arQuality').disabled=true;
+  modelOrigin.visible=false;sphere.visible=false;
+  $('rough').disabled=false;$('scan').disabled=!depthMode;$('find').disabled=true;
+  note(depthMode?'DEPTH mode ready. Place model, scan different views, then Find assembly.':'FAST AR active: camera tracking only. Place the model and rotate it freely; Depth mode is needed for automatic geometry recognition.');
+  scanReport(depthMode?'Waiting for Scan object. Depth processing is OFF until requested.':'FAST mode: CPU depth processing disabled.');
+  $('perfReadout').textContent=depthMode?'DEPTH mode active (heavier).':'FAST mode active (low load).';
+  session.addEventListener('end',()=>{
+   session=null;referenceSpace=null;viewerSpace=null;hitSource=null;hit=null;scanOn=false;depthMode=false;
+   document.body.classList.remove('is-ar');$('arBtn').textContent='Start AR';$('arQuality').disabled=false;
+   $('rough').disabled=true;$('scan').disabled=true;$('find').disabled=true;
+   scene.background=new THREE.Color('#071523');sphere.visible=false;
+   modelOrigin.position.set(0,0,0);modelOrigin.quaternion.copy(viewSeed);modelOrigin.visible=loaded;
+   clearMatching(true);resizeViewport();camera.position.set(0,0,previewDistance);camera.lookAt(0,0,0);
+   $('perfReadout').textContent='AR stopped.';
+   note('AR ended. Preview rotation preserved; adjust freely and start AR again.');
+  });
+ }catch(err){
+  console.error(err);if(session){try{await session.end();}catch(_){}}session=null;depthMode=false;document.body.classList.remove('is-ar');resizeViewport();
+  $('rough').disabled=true;$('scan').disabled=true;$('find').disabled=true;note('Could not start AR: '+err.message);
+ }finally{$('arBtn').disabled=false;}
+}
+$('arBtn').onclick=startAR;
+// WebXR depths are distances along the view -Z axis; unproject with the per-eye projection matrix.
+function pointFromDepth(view,depth,u,v,worldMatrix,inverseProjection){let d;try{d=depth.getDepthInMeters(u,v);}catch(_){return null;}if(!Number.isFinite(d)||d<.25||d>5)return null;const p=new THREE.Vector4(2*u-1,1-2*v,-1,1).applyMatrix4(inverseProjection);if(Math.abs(p.w)<1e-9)return null;const r=new THREE.Vector3(p.x/p.w,p.y/p.w,p.z/p.w);if(r.z>=0)return null;r.multiplyScalar(d/-r.z);return r.applyMatrix4(worldMatrix);}
+function depthCapture(t,frame){if(!scanOn||!depthMode||t-lastScan<1000)return;lastScan=t;const pose=frame.getViewerPose(referenceSpace);if(!pose||!pose.views?.length)return;const view=pose.views[0];if(typeof frame.getDepthInformation!=='function'){scanOn=false;scanReport('WebXR CPU depth API not available. Cannot find the assembly automatically on this phone.');return;}let info;try{info=frame.getDepthInformation(view);}catch(err){scanOn=false;scanReport('CPU depth failed: '+err.message);return;}if(!info){scanReport('Waiting for valid depth frames. Move the phone slowly and scan a textured surface.');return;}depthSeen=true;const world=new THREE.Matrix4().fromArray(view.transform.matrix);const invProjection=new THREE.Matrix4().fromArray(view.projectionMatrix).invert();if(!scanOrigin){scanOrigin=pointFromDepth(view,info,.5,.5,world,invProjection);if(!scanOrigin){scanReport('Aim the crosshair at a visible part of the physical assembly.');return;}}
+ const radius=Math.max(.25,Math.min(2.8,cadDiagonal*.8));let added=0;for(let yi=0;yi<7;yi++){const v=.28+yi*.075;for(let xi=0;xi<8;xi++){const u=.25+xi*.075;const pt=pointFromDepth(view,info,u,v,world,invProjection);if(!pt||pt.distanceTo(scanOrigin)>radius)continue;const key=[pt.x,pt.y,pt.z].map(k=>Math.floor(k/voxel)).join('|');if(!scanPoints.has(key)&&scanPoints.size<1800){scanPoints.set(key,pt);added++;}}}
+ if(added){frameCount++;if(scanPoints.size>=180&&frameCount>=3)$('find').disabled=false;const c=new THREE.Vector3().setFromMatrixPosition(world);if(lastCamera)motion+=Math.min(.14,c.distanceTo(lastCamera));lastCamera=c;quality.sampled=scanPoints.size;quality.frames=frameCount;quality.travel=motion;}
+ scanReport(`${scanPoints.size} depth points · ${frameCount} frames · camera movement ${(motion*100).toFixed(0)} cm. Scan different views, then Find assembly.`);
+ if(scanPoints.size>=1800){scanOn=false;$('scan').textContent='Resume scan';note('Scan sample limit reached. Press Find assembly to match the STEP geometry.');}
+}
+$('scan').onclick=()=>{if(!session){note('Start AR first.');return;}if(!depthMode){note('Automatic matching requires Depth mode, but the phone currently uses Fast AR.');return;}if(!modelOrigin.visible){note('Press Place roughly first, aiming at the product.');return;}scanOn=!scanOn;$('scan').textContent=scanOn?'Pause scan':'Resume scan';$('find').disabled=scanPoints.size<180;note(scanOn?'Depth scan started. Move slowly around the stationary assembly, keeping it near the reticle.':'Depth scan paused. Press Find assembly to match geometry.');};
+// CAD surface sampling, KD-tree search, user-seeded robust ICP.
+let cadSurface=null,tree=null;function buildKD(arr,axis=0){if(!arr.length)return null;arr.sort((a,b)=>a.p.getComponent(axis)-b.p.getComponent(axis));const m=Math.floor(arr.length/2);return {index:arr[m].i,p:arr[m].p,axis,left:buildKD(arr.slice(0,m),(axis+1)%3),right:buildKD(arr.slice(m+1),(axis+1)%3)};}
+function nearest(node,p,best={d2:Infinity,i:-1}){if(!node)return best;const d=node.p.distanceToSquared(p);if(d<best.d2){best.d2=d;best.i=node.index;}const z=p.getComponent(node.axis)-node.p.getComponent(node.axis);nearest(z<0?node.left:node.right,p,best);if(z*z<best.d2)nearest(z<0?node.right:node.left,p,best);return best;}
+function sampleCAD(){if(cadSurface)return;const triangles=[];let total=0;for(const part of parts){part.updateMatrix();const g=part.geometry,pos=g.getAttribute('position'),idx=g.index;const n=idx?Math.floor(idx.count/3):Math.floor(pos.count/3),skip=Math.max(1,Math.ceil(n/1500));for(let i=0;i<n;i+=skip){const j=3*i,a=idx?idx.getX(j):j,b=idx?idx.getX(j+1):j+1,c=idx?idx.getX(j+2):j+2;const A=new THREE.Vector3().fromBufferAttribute(pos,a).applyMatrix4(part.matrix).sub(cadCenter).multiplyScalar(.001);const B=new THREE.Vector3().fromBufferAttribute(pos,b).applyMatrix4(part.matrix).sub(cadCenter).multiplyScalar(.001);const C=new THREE.Vector3().fromBufferAttribute(pos,c).applyMatrix4(part.matrix).sub(cadCenter).multiplyScalar(.001);const area=B.clone().sub(A).cross(C.clone().sub(A)).length()*.5*skip;if(area<1e-11)continue;total+=area;triangles.push({A,B,C,sum:total});}}
+ if(!triangles.length)throw Error('STEP has no usable triangulated surfaces');let seed=17332;const rnd=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};cadSurface=[];const count=900;for(let i=0;i<count;i++){const v=rnd()*total;let lo=0,hi=triangles.length-1;while(lo<hi){const m=(lo+hi)>>1;if(triangles[m].sum<v)lo=m+1;else hi=m;}const t=triangles[lo],u=Math.sqrt(rnd()),w=rnd();cadSurface.push(t.A.clone().multiplyScalar(1-u).addScaledVector(t.B,u*(1-w)).addScaledVector(t.C,u*w));}tree=buildKD(cadSurface.map((p,i)=>({i,p})));}
+function mean(points){const r=new THREE.Vector3();for(const p of points)r.add(p);return r.multiplyScalar(1/Math.max(1,points.length));}
+// Horn quaternion method for optimal least-squares 3D rigid transform.
+function rigid(P,Q){const pc=mean(P),qc=mean(Q),M=Array.from({length:3},()=>[0,0,0]);for(let i=0;i<P.length;i++){const p=P[i].clone().sub(pc),q=Q[i].clone().sub(qc),a=[p.x,p.y,p.z],b=[q.x,q.y,q.z];for(let j=0;j<3;j++)for(let k=0;k<3;k++)M[j][k]+=a[j]*b[k];}const [xx,xy,xz]=M[0],[yx,yy,yz]=M[1],[zx,zy,zz]=M[2],N=[[xx+yy+zz,yz-zy,zx-xz,xy-yx],[yz-zy,xx-yy-zz,xy+yx,zx+xz],[zx-xz,xy+yx,-xx+yy-zz,yz+zy],[xy-yx,zx+xz,yz+zy,-xx-yy+zz]];const V=[[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]];
+ for(let it=0;it<40;it++){let a=0,b=1;for(let j=0;j<4;j++)for(let k=j+1;k<4;k++)if(Math.abs(N[j][k])>Math.abs(N[a][b])){a=j;b=k;}if(Math.abs(N[a][b])<1e-9)break;const tau=(N[b][b]-N[a][a])/(2*N[a][b]),t=(tau>=0?1:-1)/(Math.abs(tau)+Math.sqrt(1+tau*tau)),cs=1/Math.sqrt(1+t*t),sn=cs*t,app=N[a][a],aqq=N[b][b],apq=N[a][b];N[a][a]=app-t*apq;N[b][b]=aqq+t*apq;N[a][b]=N[b][a]=0;for(let k=0;k<4;k++){if(k!==a&&k!==b){const ka=N[k][a],kb=N[k][b];N[k][a]=N[a][k]=cs*ka-sn*kb;N[k][b]=N[b][k]=sn*ka+cs*kb;}const va=V[k][a],vb=V[k][b];V[k][a]=cs*va-sn*vb;V[k][b]=sn*va+cs*vb;}}
+ const m=[0,1,2,3].reduce((r,i)=>N[i][i]>N[r][r]?i:r,0),q=new THREE.Quaternion(V[1][m],V[2][m],V[3][m],V[0][m]).normalize();return {q,t:qc.clone().sub(pc.clone().applyQuaternion(q))};}
+function metric(pose,cloud){const qi=pose.q.clone().invert(),d=[];let matched=0;for(const pt of cloud){const local=pt.clone().sub(pose.t).applyQuaternion(qi),k=nearest(tree,local),dist=Math.sqrt(k.d2);if(dist<.04)matched++;d.push(dist);}d.sort((a,b)=>a-b);const median=d[Math.floor(d.length*.5)],p90=d[Math.floor(d.length*.9)],coverage=matched/Math.max(d.length,1);return {median,p90,coverage,score:median+.14*p90+.04*(1-coverage)};}
+function ICP(seed,cloud,steps=6){let pose={q:seed.q.clone(),t:seed.t.clone()},best=pose,bestScore=Infinity;for(let it=0;it<steps;it++){const qi=pose.q.clone().invert(),matches=[];for(const pt of cloud){const local=pt.clone().sub(pose.t).applyQuaternion(qi),nn=nearest(tree,local);matches.push({p:cadSurface[nn.i],q:pt,d:Math.sqrt(nn.d2)});}matches.sort((a,b)=>a.d-b.d);const keep=matches.slice(0,Math.floor(matches.length*.68)).filter(v=>v.d<.20);if(keep.length<12)break;const next=rigid(keep.map(v=>v.p),keep.map(v=>v.q));const measure=metric(next,cloud);if(measure.score<bestScore){bestScore=measure.score;best=next;}pose=next;}return {pose:best,measure:metric(best,cloud)};}
+function rotated(q,axis,angle){const d=new THREE.Quaternion().setFromAxisAngle(axis,angle);return q.clone().multiply(d).normalize();}
+async function findObject(){if(matching)return;if(!session||!loaded){note('Start AR and load a STEP model first.');return;}if(!depthMode){note('No CPU depth available in this AR session; automatic 3D matching cannot run.');return;}if(scanPoints.size<180||frameCount<3){note('Need more depth observations. Press Scan object and move around the physical part first.');return;}scanOn=false;$('scan').textContent='Resume scan';matching=true;$('find').disabled=true;note('Comparing observed depth geometry to STEP. Use the matching orientation selected in preview…');try{sampleCAD();const cloud=[...scanPoints.values()],n=Math.max(1,Math.ceil(cloud.length/175)),points=cloud.filter((_,i)=>i%n).slice(0,175);const Q=modelOrigin.quaternion.clone(),T=modelOrigin.position.clone();const centre=mean(cloud);const seeds=[{q:Q,t:T},{q:Q,t:centre}];const axes=[new THREE.Vector3(1,0,0),new THREE.Vector3(0,1,0),new THREE.Vector3(0,0,1)];for(const axis of axes)for(const angle of [-.32,.32]){const q=rotated(Q,axis,angle);seeds.push({q,t:T.clone()},{q,t:centre.clone()});}
+ let best=null;for(let i=0;i<seeds.length;i++){const result=ICP(seeds[i],points,3);if(!best||result.measure.score<best.measure.score)best=result;if(true){scanReport(`Matching CAD view ${i+1}/${seeds.length}. Current median mismatch ${(best.measure.median*1000).toFixed(1)} mm`);await new Promise(done=>setTimeout(done,0));}}
+ const improved=ICP(best.pose,points,5);if(improved.measure.score<best.measure.score)best=improved;
+ const mm=best.measure.median*1000,coverage=best.measure.coverage,score=best.measure.score;if(!Number.isFinite(mm))throw Error('Invalid match');bestPose=best;quality.median=mm;quality.p90=best.measure.p90*1000;quality.confidence=(coverage>.58&&mm<20&&motion>.15)?'provisional':'low';modelOrigin.position.copy(best.pose.t);modelOrigin.quaternion.copy(best.pose.q);baseOrientation.copy(best.pose.q);modelOrigin.visible=false;modelOrigin.visible=true;updateDeviationDots();const label=quality.confidence==='provisional'?'Provisional geometry match':'LOW CONFIDENCE — likely incomplete or incorrect match';note(`${label}. Median CAD distance ${mm.toFixed(1)} mm, observed match within 40 mm ${(coverage*100).toFixed(0)}%. Verify recognizable corners before inspection.`);scanReport(`Matched ${cloud.length} observed samples. Median ${mm.toFixed(1)} mm; p90 ${quality.p90.toFixed(1)} mm. Reliability: ${quality.confidence}.`);}
+ catch(err){note('Find Assembly failed: '+err.message);scanReport('Could not complete geometry matching. Try a more distinctive view or move closer.');console.error(err);}finally{matching=false;$('find').disabled=false;}}
+$('find').onclick=findObject;
+function updateDeviationDots(){if(!bestPose)return;const tolerance=Number($('tolerance').value)/1000,pts=[...scanPoints.values()].filter((_,i)=>i%Math.max(1,Math.floor(scanPoints.size/1200))===0).slice(0,1200);const positions=[],colors=[];let ok=0,warn=0,bad=0,unassigned=0;const inv=bestPose.pose.q.clone().invert();for(const p of pts){const local=p.clone().sub(bestPose.pose.t).applyQuaternion(inv),m=nearest(tree,local),d=Math.sqrt(m.d2);if(d>.10){unassigned++;continue;}positions.push(p.x,p.y,p.z);if(d<=tolerance){colors.push(.1,1,.65);ok++;}else if(d<=2*tolerance){colors.push(1,.7,.1);warn++;}else{colors.push(1,.19,.25);bad++;}}
+ scanCloud.geometry.dispose();const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));g.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));scanCloud.geometry=g;scanCloud.visible=true;$('report').textContent=`Provisional point-to-CAD distances: ${ok} within threshold; ${warn} moderately distant; ${bad} farther than 2× threshold; ${unassigned} excluded as possible background. These numbers are NOT validated deviations. Unscanned surfaces and missing components remain unknown.`;}
+$('export').onclick=()=>{const body={app:'Assembly AR v6',model:modelName,date:new Date().toISOString(),tolerance_mm:Number($('tolerance').value),scan_samples:scanPoints.size,scan_frames:frameCount,camera_motion_m:motion,matching_confidence:quality.confidence,median_nearest_CAD_distance_mm:quality.median,p90_nearest_CAD_distance_mm:quality.p90,warning:'Experimental point-cloud match; no ±5 mm metrology guarantee; unobserved parts not inspected.'};const blob=new Blob([JSON.stringify(body,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='assembly-v6-experimental-report.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
+function resizeViewport(){
+ const w=session?innerWidth:Math.max(1,camPane.clientWidth),h=session?innerHeight:Math.max(1,camPane.clientHeight);
+ if(!session)renderer.setSize(w,h,true);camera.aspect=w/h;camera.updateProjectionMatrix();
+}
+let lastHit=0,lastUI=0,fpsFrames=0,lastFps=0,lastRenderError='';
+renderer.setAnimationLoop((time,frame)=>{
+ try{
+  if(frame&&session){
+   fpsFrames++;
+   if(time-lastHit>350){lastHit=time;try{const hits=hitSource?frame.getHitTestResults(hitSource):[];hit=hits[0]||null;}catch(_){hit=null;}
+     $('reticle').style.opacity=hit?'1':'.38';}
+   if(scanOn&&depthMode)depthCapture(time,frame);
+   if(!lastFps)lastFps=time;
+   if(time-lastFps>2500){let fps=Math.round(fpsFrames*1000/(time-lastFps));$('perfReadout').textContent=(depthMode?'DEPTH':'FAST')+' · '+fps+' FPS · depth '+(scanOn?'sampling':'idle');fpsFrames=0;lastFps=time;}
+  }
+  renderer.render(scene,camera);
+ }catch(err){
+  // Never silently fail the render callback: report unexpected exceptions in the fixed control panel.
+  const msg=err?.message||String(err);if(msg!==lastRenderError){lastRenderError=msg;note('AR rendering error: '+msg);console.error(err);}
+ }
+});
+window.addEventListener('resize',resizeViewport);
+window.addEventListener('orientationchange',()=>setTimeout(resizeViewport,180));
+modelOrigin.visible=false;$('rough').disabled=true;$('scan').disabled=true;$('find').disabled=true;
+resizeViewport();stats('Load STEP or Demo to begin.');
+</script>
+</body></html>
