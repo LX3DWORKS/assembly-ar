@@ -26,6 +26,10 @@ jobs:
           echo "f657347a70e587a34abfc5fb0c238dc7a3fac5437f326ac559fe1919a4ed5c20  /tmp/lxscanslim.tar.xz" | sha256sum --check
           mkdir -p lx3dscanner/project
           tar -xJf /tmp/lxscanslim.tar.xz -C lx3dscanner/project
+          cat lx3dscanner/v02delta/part*.txt | base64 --decode > /tmp/lx3d_v02_delta.tar.xz
+          echo "7e41804178e7407a4eef29dba8b20d5ceb18c93a2ff24bf1ae68b06ab498c146  /tmp/lx3d_v02_delta.tar.xz" | sha256sum --check
+          tar -xJf /tmp/lx3d_v02_delta.tar.xz -C lx3dscanner/project
+          (cd lx3dscanner/project && patch -p1 < lx3d_v02_changes.patch)
           printf 'android.useAndroidX=true\norg.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8\n' > lx3dscanner/project/gradle.properties
       - name: Build signed debug APK
         run: |
