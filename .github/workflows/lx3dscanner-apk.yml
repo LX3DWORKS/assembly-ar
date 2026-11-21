@@ -37,6 +37,11 @@ jobs:
           for patchfile in /tmp/lx3d_v03_patch/lx3d_v03_{cam,activity,gradle}.patch; do
             (cd lx3dscanner/project && patch --batch -p1 < "$patchfile")
           done
+          base64 --decode lx3dscanner/v04patch/code.b64 > /tmp/lx3d_v04_patch.tar.xz
+          echo "524225eb173e5e3671921857e7498112e73f1b459d0b5f72d492ddfec840776a  /tmp/lx3d_v04_patch.tar.xz" | sha256sum --check
+          mkdir -p /tmp/lx3d_v04_patch
+          tar -xJf /tmp/lx3d_v04_patch.tar.xz -C /tmp/lx3d_v04_patch
+          (cd lx3dscanner/project && patch --batch -p1 < /tmp/lx3d_v04_patch/lx3d_v04_changes.patch)
           printf 'android.useAndroidX=true\norg.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8\n' > lx3dscanner/project/gradle.properties
       - name: Build signed debug APK
         run: |
