@@ -26,6 +26,7 @@ jobs:
           echo "f657347a70e587a34abfc5fb0c238dc7a3fac5437f326ac559fe1919a4ed5c20  /tmp/lxscanslim.tar.xz" | sha256sum --check
           mkdir -p lx3dscanner/project
           tar -xJf /tmp/lxscanslim.tar.xz -C lx3dscanner/project
+          printf 'android.useAndroidX=true\norg.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8\n' > lx3dscanner/project/gradle.properties
       - name: Build signed debug APK
         run: |
           yes | sdkmanager --licenses >/dev/null || true
