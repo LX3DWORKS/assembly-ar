@@ -14,6 +14,9 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools'
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
@@ -25,8 +28,8 @@ jobs:
           tar -xJf /tmp/lxscanslim.tar.xz -C lx3dscanner/project
       - name: Build signed debug APK
         run: |
-          yes | /usr/local/lib/android/sdk/cmdline-tools/16.0/bin/sdkmanager --licenses >/dev/null || true
-          /usr/local/lib/android/sdk/cmdline-tools/16.0/bin/sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
           gradle --no-daemon -p lx3dscanner/project :app:assembleDebug
       - uses: actions/upload-artifact@v4
         with:
